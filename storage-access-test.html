@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <title>DILG Batanes — Iframe Authentication Diagnostic</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#090b11;color:#f2f4fa}
+    *{box-sizing:border-box}body{margin:0;padding:20px;min-height:100vh}
+    main{max-width:950px;margin:auto}h1{font-size:1.35rem;margin:0 0 8px}p{color:#bac3d1;line-height:1.5}
+    .panel{border:1px solid #30394b;border-radius:12px;padding:16px;background:#121826;margin:14px 0}
+    button,a.action{font:inherit;border:1px solid #64748b;color:white;background:#233657;border-radius:9px;padding:11px 14px;cursor:pointer;text-decoration:none;display:inline-block;margin:3px 6px 3px 0}
+    button:focus-visible,a:focus-visible{outline:3px solid #93c5fd}button.secondary{background:#141e32}
+    #log{white-space:pre-wrap;overflow-wrap:anywhere;background:#090d17;padding:13px;border-radius:9px;min-height:120px;font:12px/1.6 ui-monospace,Consolas,monospace;color:#d1e9ff}
+    iframe{width:100%;height:420px;border:1px solid #526178;border-radius:10px;background:white}
+    .tag{font-weight:bold;color:#fde68a}small{color:#b6c5d5}
+  </style>
+</head>
+<body>
+<main>
+  <h1>DILG Batanes — Google iframe diagnostic (TEST ONLY)</h1>
+  <p>This page does not replace the live system. It checks whether the Apps Script iframe loads while Safari's <strong>Prevent Cross-Site Tracking is ON</strong>. It cannot read Google cookies or automatically detect HTTP 401 across origins.</p>
+  <section class="panel">
+    <p class="tag">Step 1 — Open the direct Apps Script link and sign in first.</p>
+    <a id="direct" class="action" target="_blank" rel="noopener noreferrer" href="https://script.google.com/macros/s/AKfycbzDGEnEUpvOESQCu6GL-L0Of3gQz9W7pSnz-WhRvp_331Z_Tfv0HVaeWEALt5wcKckn/exec">Open Apps Script directly</a>
+    <p class="tag">Step 2 — Return here, and test embedding with cross-site tracking protection ON.</p>
+    <button id="load">Load iframe</button>
+    <button id="reload" class="secondary">Retry iframe</button>
+    <button id="copy" class="secondary">Copy diagnostics</button>
+    <p><small>Iframe load event ≠ authenticated success. Only a verified <code>DILG_AUTH_PROBE_READY</code> message from WebApp counts as confirmation.</small></p>
+  </section>
+  <section class="panel">
+    <div id="log" role="status" aria-live="polite"></div>
+  </section>
+  <section class="panel">
+    <iframe id="frame" title="DILG Apps Script embed test" allow="storage-access" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  </section>
+</main>
+<script>
+(function(){
+  'use strict';
+  var SRC='https://script.google.com/macros/s/AKfycbzDGEnEUpvOESQCu6GL-L0Of3gQz9W7pSnz-WhRvp_331Z_Tfv0HVaeWEALt5wcKckn/exec';
+  var frame=document.getElementById('frame');
+  var log=document.getElementById('log');
+  var counter=0;
+  function write(msg){var d=new Date();var t=d.toTimeString().slice(0,8);log.textContent+='['+t+'] '+msg+'\n';}
+  write('Browser: '+navigator.userAgent);
+  write('Secure context: '+(window.isSecureContext?'yes':'no'));
+  write('Top-level storage API available: '+(typeof document.hasStorageAccess==='function'?'yes':'no'));
+  write('Top-level check is NOT a test of storage access inside Google iframe.');
+  function reload(){counter++;write('Iframe navigation '+counter+' started.');frame.src=SRC+(SRC.indexOf('?')<0?'?':'&')+'dilg_auth_test='+counter;}
+  frame.addEventListener('load',function(){write('Iframe load event (may be a Google 401/login/error page; not verified).');});
+  window.addEventListener('message',function(ev){
+    if(!ev.data||typeof ev.data!=='object'||ev.data.type!=='DILG_AUTH_PROBE_READY')return;
+    if(ev.source!==frame.contentWindow){write('Ignored message from another window.');return;}
+    if(!/^https:\/\/(?:script\.google\.com|script\.googleusercontent\.com|[a-z0-9-]+\.googleusercontent\.com)$/.test(ev.origin)){write('Ignored unexpected origin: '+ev.origin);return;}
+    write('VERIFIED: WebApp frontend executed inside iframe (origin '+ev.origin+').');
+  });
+  document.getElementById('load').addEventListener('click',reload);
+  document.getElementById('reload').addEventListener('click',reload);
+  document.getElementById('copy').addEventListener('click',function(){
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(log.textContent).then(function(){write('Diagnostics copied.');},function(){write('Copy blocked; screenshot the log instead.');});}
+    else {write('Clipboard API unavailable. Screenshot the log.');}
+  });
+})();
+</script>
+</body>
+</html>
