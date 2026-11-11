@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <title>DILG Batanes · Non-iframe Google Auth TEST</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;background:#070c18;color:#f8fafc;padding:24px}
+    main{width:min(540px,100%);background:#141d30;border:1px solid #33435c;border-radius:20px;padding:26px;box-shadow:0 18px 50px #0005}
+    .kicker{color:#99b4d8;font-size:12px;letter-spacing:.12em;font-weight:800}.pill{display:inline-block;background:#28374f;color:#c5d6ed;padding:5px 10px;border-radius:100px;font-size:12px;margin-top:12px}
+    h1{font-size:clamp(22px,4vw,28px);line-height:1.22;margin:14px 0 8px}p{line-height:1.55;color:#cbd5e1}
+    button{background:#3075ee;color:white;border:0;border-radius:11px;padding:13px 16px;font-weight:700;cursor:pointer;font:inherit;margin:5px 6px 5px 0}
+    button:disabled{opacity:.4;cursor:not-allowed}.secondary{background:#34445b}.status{padding:12px 14px;border-radius:12px;background:#1b2b43;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:12px;min-height:52px;font-size:14px}
+    details{margin-top:18px}summary{color:#a1c5fb;cursor:pointer}.small{font-size:12px;color:#a6b6c9}code{color:#a5d6ff}
+  </style>
+  <script src="config.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <main>
+    <div class="kicker">DILG BATANES · OFFICE OPERATIONS</div>
+    <span class="pill">NON-IFRAME CONNECTIVITY TEST</span>
+    <h1>Google Login + Apps Script API</h1>
+    <p>Hindi ito ang live system. Susubukan lang kung makakapag-Google sign-in at makatawag ng read-only Apps Script function mula sa GitHub Pages <strong>nang walang iframe</strong>.</p>
+    <button id="login" type="button">Sign in with Google</button>
+    <button id="ping" type="button" disabled>Test API connection</button>
+    <button id="reset" class="secondary" type="button">Clear test session</button>
+    <div id="state" class="status" role="status" aria-live="polite">Initializing Google Identity Services…</div>
+    <details><summary>What does this test prove?</summary>
+      <p class="small">If Google login and API call succeed, GitHub Pages can communicate with Apps Script without an iframe. The entire existing Operations System is <strong>not yet migrated</strong>. All write operations and permissions must be audited separately.</p>
+    </details>
+    <p class="small">Never paste tokens, credentials, client secrets, or personnel data into the GitHub repository. A public OAuth Client ID in <code>config.js</code> is not a secret.</p>
+  </main>
+  <script>
+    (() => {
+      'use strict';
+      const $ = (id) => document.getElementById(id);
+      const cfg = window.DILG_TEST_CONFIG || {};
+      let tokenClient = null;
+      let accessToken = '';
+      let expiry = 0;
+      let busy = false;
+      const login = $('login'), ping = $('ping'), state = $('state');
+      const say = (message) => { state.textContent = message; };
+      function configured(){
+        return typeof cfg.clientId === 'string' && cfg.clientId.endsWith('.apps.googleusercontent.com') &&
+          !cfg.clientId.startsWith('REPLACE_') && typeof cfg.apiDeploymentId === 'string' &&
+          !cfg.apiDeploymentId.startsWith('REPLACE_') && !!String(cfg.scopes||'').trim();
+      }
+      function refreshButtons(){
+        login.disabled = busy || !tokenClient;
+        ping.disabled = busy || !accessToken || Date.now() > expiry - 120000;
+      }
+      function init(){
+        if (!configured()) { say('SETUP REQUIRED: Fill in config.js with the OAuth Web Client ID, API Executable deployment ID and the complete required OAuth scopes.'); login.disabled = true; return; }
+        if (!window.google || !google.accounts || !google.accounts.oauth2) {
+          say('Google Identity Services is not available. Check network/ad blockers and reload.');return;
+        }
+        try {
+          tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: cfg.clientId,
+            scope: cfg.scopes,
+            callback: (response) => {
+              busy = false;
+              if (response.error || !response.access_token) {
+                say('Google sign-in failed: ' + (response.error || 'No access token returned.'));
+              } else {
+                accessToken = response.access_token; // in memory ONLY
+                expiry = Date.now() + (Number(response.expires_in)||3600)*1000;
+                say('Google OAuth completed. Now press “Test API connection”. This does not yet verify personnel authorization.');
+              }
+              refreshButtons();
+            },
+            error_callback: (error) => {busy = false; say('OAuth window failed or was closed: ' + (error?.type || 'unknown')); refreshButtons();}
+          });
+          say('Ready. Press “Sign in with Google” to test without an iframe.');
+          refreshButtons();
+        } catch (e) {say('Unable to initialize Google login: ' + (e.message || e));}
+      }
+      login.addEventListener('click', () => {
+        if (!tokenClient || busy) return;
+        busy = true; refreshButtons(); say('Opening Google authentication…');
+        try {tokenClient.requestAccessToken({prompt:'select_account'});} catch(e){busy=false;say('Google login error: '+e.message);refreshButtons();}
+      });
+      ping.addEventListener('click', async () => {
+        if (!accessToken || busy) return;
+        busy = true;refreshButtons();say('Calling Google Apps Script API…');
+        try {
+          const res = await fetch('https://script.googleapis.com/v1/scripts/' + encodeURIComponent(cfg.apiDeploymentId) + ':run', {
+            method:'POST',headers:{'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'},
+            body:JSON.stringify({function:'dilgApiHealthCheck',parameters:[]})
+          });
+          const payload = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error('HTTP '+res.status+': '+(payload.error?.message||'Apps Script API call rejected'));
+          if (payload.error) throw new Error(payload.error.message||'Apps Script function failed');
+          if (!payload.done) throw new Error('Apps Script API returned unfinished execution.');
+          const result = payload.response?.result;
+          if (!result || result.ok !== true) throw new Error('Unexpected response: '+JSON.stringify(result));
+          say('SUCCESS! Google OAuth and direct Apps Script API worked without an iframe.\n\n'+JSON.stringify(result,null,2));
+        } catch(e) {say('API TEST FAILED: '+(e.message||e)+'\n\nCheck OAuth scopes, shared standard Google Cloud project, enabled API, API Executable deployment/access, and function name.');}
+        finally {busy=false;refreshButtons();}
+      });
+      $('reset').addEventListener('click', () => {
+        if (accessToken && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(accessToken, () => {});
+        accessToken='';expiry=0;say('Temporary test access token cleared from this page.');refreshButtons();
+      });
+      // Initializing the public Google library may be asynchronous.
+      window.addEventListener('load', init);
+    })();
+  </script>
+</body>
+</html>
