@@ -38,7 +38,7 @@
     <div class="panel">
       <img class="logo" src="dilglogo.PNG" alt="DILG Batanes logo">
       <h1>DILG Batanes Office Operations System</h1>
-      <div id="loading"><div class="spinner" aria-hidden="true"></div><p>Opening the system securely…</p></div>
+      <div id="loading"><div class="spinner" aria-hidden="true"></div><p>Opening the system securely…</p><div class="actions"><a id="openDirectNow" class="action primary" href="https://script.google.com/macros/s/AKfycbzDGEnEUpvOESQCu6GL-L0Of3gQz9W7pSnz-WhRvp_331Z_Tfv0HVaeWEALt5wcKckn/exec">Open System Directly</a><button type="button" id="showHelp" class="secondary">Having trouble? Show options</button></div><div class="muted">If this screen does not disappear, use Open System Directly. Google sign-in may not work in an embedded window.</div></div>
       <div id="recovery">
         <p>The system has not confirmed that it is ready. Google sign-in may be blocked inside an embedded window on this device. Open the system directly to sign in and use it without the iframe.</p>
         <div class="actions">
@@ -60,6 +60,7 @@
       const recovery = document.getElementById('recovery');
       const openDirect = document.getElementById('openDirect');
       const retry = document.getElementById('retry');
+      const showHelp = document.getElementById('showHelp');
       openDirect.href = APP_URL;
       let generation = 0;
       let timeoutId = null;
@@ -97,7 +98,7 @@
         frame.src = APP_URL;
         timeoutId = setTimeout(function () {
           if (!ready && generation === thisGeneration) showRecovery();
-        }, 12000);
+        }, 8000);
       }
 
       window.addEventListener('message', function (event) {
@@ -112,141 +113,8 @@
         recovery.style.display = 'none';
       });
 
+      showHelp.addEventListener('click', showRecovery);
       retry.addEventListener('click', loadApp);
-      loadApp();
-    })();
-  </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>DILG Batanes Office Operations System</title>
-  <link rel="icon" type="image/png" href="dilglogo.PNG">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#000000">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="DILG Batanes">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <style>
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
-    #appFrame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #fff; visibility: hidden; }
-    #appFrame.is-ready { visibility: visible; }
-    #gate { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 22px; background: #08162c; color: #f7fbff; }
-    #gate[hidden] { display: none; }
-    .panel { width: min(100%, 420px); background: #102342; border: 1px solid #35517b; border-radius: 18px; padding: 26px; text-align: center; box-shadow: 0 15px 45px rgba(0,0,0,.2); }
-    .logo { width: 66px; height: 66px; object-fit: contain; margin-bottom: 12px; }
-    h1 { font-size: 19px; line-height: 1.35; margin: 0 0 10px; }
-    p { font-size: 14px; line-height: 1.55; color: #cedcf2; margin: 0 0 20px; }
-    .actions { display: grid; gap: 10px; }
-    button, a.action { font: 600 14px system-ui, -apple-system, Segoe UI, sans-serif; min-height: 46px; padding: 12px 15px; border-radius: 10px; cursor: pointer; text-decoration: none; display: flex; align-items: center; justify-content: center; }
-    .primary { color: #fff; border: 1px solid #2870df; background: #1762ca; }
-    .secondary { color: #fff; border: 1px solid #57709a; background: #203d65; }
-    .muted { font-size: 12px; color: #a8bedc; margin-top: 16px; }
-    #loading { display: block; }
-    #recovery { display: none; }
-    @media (prefers-reduced-motion: no-preference) { .spinner { width: 24px; height: 24px; border-radius: 50%; border: 3px solid #45628c; border-top-color: #fff; animation: spin 1s linear infinite; margin: 0 auto 16px; } @keyframes spin { to { transform: rotate(360deg); } } }
-  </style>
-</head>
-<body>
-  <iframe id="appFrame" title="DILG Batanes Office Operations System" allowfullscreen allow="fullscreen"></iframe>
-  <div id="gate" role="status" aria-live="polite">
-    <div class="panel">
-      <img class="logo" src="dilglogo.PNG" alt="DILG Batanes logo">
-      <h1>DILG Batanes Office Operations System</h1>
-      <div id="loading"><div class="spinner" aria-hidden="true"></div><p>Opening the system securely…</p></div>
-      <div id="recovery">
-        <p>The system has not confirmed that it is ready. If Google asks you to sign in, open it in a separate tab, then return here and try again.</p>
-        <div class="actions">
-          <a id="signIn" class="action primary" target="_blank" rel="noopener noreferrer">Open Google sign-in / System</a>
-          <button type="button" id="retry" class="secondary">I've signed in — Retry</button>
-        </div>
-        <div class="muted">Already signed in? Tap Retry. If access is denied in the new tab, ask your system administrator to verify your account permissions.</div>
-      </div>
-    </div>
-  </div>
-  <script>
-    (function () {
-      'use strict';
-      const APP_URL = 'https://script.google.com/macros/s/AKfycbzDGEnEUpvOESQCu6GL-L0Of3gQz9W7pSnz-WhRvp_331Z_Tfv0HVaeWEALt5wcKckn/exec';
-      const READY_TYPE = 'DILG_BATANES_APP_READY_V1';
-      const frame = document.getElementById('appFrame');
-      const gate = document.getElementById('gate');
-      const loading = document.getElementById('loading');
-      const recovery = document.getElementById('recovery');
-      const signIn = document.getElementById('signIn');
-      const retry = document.getElementById('retry');
-      signIn.href = APP_URL;
-      let generation = 0;
-      let timeoutId = null;
-      let ready = false;
-      let signInClicked = false;
-
-      function isGoogleAppsScriptOrigin(origin) {
-        try {
-          const url = new URL(origin);
-          const host = url.hostname.toLowerCase();
-          return url.protocol === 'https:' && (
-            host === 'script.google.com' ||
-            host === 'script.googleusercontent.com' ||
-            host.endsWith('.script.googleusercontent.com') ||
-            host === 'googleusercontent.com' ||
-            host.endsWith('.googleusercontent.com')
-          );
-        } catch (_) { return false; }
-      }
-
-      function showRecovery() {
-        if (ready) return;
-        loading.style.display = 'none';
-        recovery.style.display = 'block';
-      }
-
-      function loadApp() {
-        ready = false;
-        generation++;
-        const thisGeneration = generation;
-        clearTimeout(timeoutId);
-        frame.classList.remove('is-ready');
-        gate.hidden = false;
-        loading.style.display = 'block';
-        recovery.style.display = 'none';
-        frame.src = APP_URL;
-        timeoutId = setTimeout(function () {
-          if (!ready && generation === thisGeneration) showRecovery();
-        }, 12000);
-      }
-
-      window.addEventListener('message', function (event) {
-        if (!isGoogleAppsScriptOrigin(event.origin)) return;
-        if (!event.data || event.data.type !== READY_TYPE) return;
-        // Message contains no identity or authorization data: only indicates the app UI initialized.
-        ready = true;
-        clearTimeout(timeoutId);
-        frame.classList.add('is-ready');
-        gate.hidden = true;
-        loading.style.display = 'none';
-        recovery.style.display = 'none';
-      });
-
-      retry.addEventListener('click', loadApp);
-      signIn.addEventListener('click', function () { signInClicked = true; });
-      window.addEventListener('focus', function () {
-        if (signInClicked && !ready) {
-          signInClicked = false;
-          setTimeout(loadApp, 600);
-        }
-      });
-      document.addEventListener('visibilitychange', function () {
-        if (!document.hidden && signInClicked && !ready) {
-          signInClicked = false;
-          setTimeout(loadApp, 600);
-        }
-      });
       loadApp();
     })();
   </script>
